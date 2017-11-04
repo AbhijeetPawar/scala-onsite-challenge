@@ -13,6 +13,10 @@ object CampaignRepository {
       Campaigns.get(id)
   }
 
+  def findByBundleNameAndConnectionTypeAndCountry(bundleName: String, ip: String, connectionType: String): Option[Campaign] = Campaigns.synchronized {
+    Campaigns.values.find(campaign => campaign.connectionType.equals(connectionType) && campaign.mobileApp.equals(bundleName))
+  }
+
   def update(campaign: Campaign): Unit = Campaigns.synchronized {
     Campaigns.update(campaign.id, campaign)
   }
