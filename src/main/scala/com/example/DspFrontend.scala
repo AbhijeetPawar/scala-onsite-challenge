@@ -1,11 +1,13 @@
 package com.example
 
 import akka.actor.ActorSystem
+import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Directives
 import akka.http.scaladsl.server.Route
 import akka.stream.Materializer
 
 import scala.concurrent.ExecutionContextExecutor
+import scala.util.{Failure, Success}
 
 /*
  * Add your logic here. Feel free to rearrange the code as you see fit,
@@ -29,11 +31,9 @@ trait DspFrontend extends Directives with BidResponseJsonFormats {
         }
       }
     } ~ path("winner" / Segment) { auction_id =>
-      get {
-        complete {
-          service.bidWinner(auction_id)
-          "OK"
-        }
+          onComplete(service.bidWinner(auction_id)) {
+            case Success(_) => complete(StatusCodes.Created, "OK")
+            case Failure(_) => complete(StatusCodes.InternalServerError.intValue, "No entry found for given auction token. Bad Request or Possible Timeout")
       }
     }
 }
