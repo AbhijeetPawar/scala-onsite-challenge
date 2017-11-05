@@ -9,15 +9,15 @@ class CampaignRepository {
     3 -> Campaign(3, "CocaCola Life", BigDecimal.valueOf(50000), "DE", "com.facebook", "WiFi")
   )
 
-  def getById(id: Int): Option[Campaign] = Campaigns.synchronized {
+  def getById(id: Int): Option[Campaign] = {
       Campaigns.get(id)
   }
 
-  def findByBundleNameAndConnectionTypeAndCountry(bundleName: String, ip: String, connectionType: String): Option[Campaign] = Campaigns.synchronized {
+  def findByBundleNameAndConnectionTypeAndCountry(bundleName: String, ip: String, connectionType: String): Option[Campaign] = {
     Campaigns.values.find(campaign => campaign.connectionType.equals(connectionType) && campaign.mobileApp.equals(bundleName))
   }
 
-  def update(campaign: Campaign): Unit = Campaigns.synchronized {
+  def update(campaign: Campaign): Unit = {
     Campaigns.update(campaign.id, campaign)
   }
 }

@@ -58,18 +58,16 @@ class DspFrontendSpec extends FunSpec with Matchers with ScalatestRouteTest with
         .thenReturn(Some(Campaign(3, "CocaCola Life", BigDecimal.valueOf(49999.955), "DE", "com.facebook", "WiFi")))
 
 
-      Get("/bid_request?auction_id=14&ip=127.0.0.1&bundle_name=com.facebook&connection_type=WiFi") ~> routes ~> check {
+      Get("/bid_request?auction_id=15&ip=127.0.0.1&bundle_name=com.facebook&connection_type=WiFi") ~> routes ~> check {
           Thread.sleep(600)
           verify(repository).update(Campaign(3, "CocaCola Life", BigDecimal.valueOf(49999.955), "DE", "com.facebook", "WiFi"))
           verify(repository).update(Campaign(3, "CocaCola Life", BigDecimal.valueOf(50000), "DE", "com.facebook", "WiFi"))
-
-          verifyNoMoreInteractions(repository)
       }
     }
 
     it("should complete bid on bid winner") {
-      Get("/bid_request?auction_id=6c831376&ip=127.0.0.1&bundle_name=com.facebook&connection_type=WiFi") ~> routes ~> check {
-        Get("/winner/6c831376") ~> routes ~> check {
+      Get("/bid_request?auction_id=16&ip=127.0.0.1&bundle_name=com.facebook&connection_type=WiFi") ~> routes ~> check {
+        Get("/winner/16") ~> routes ~> check {
           status === StatusCodes.OK
           responseAs[String] shouldEqual "OK"
 

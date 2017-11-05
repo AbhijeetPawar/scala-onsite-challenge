@@ -2,30 +2,32 @@ package com.example
 
 import akka.actor.{Actor, PoisonPill, ReceiveTimeout}
 
+import scala.concurrent.Future
 import scala.concurrent.duration.{Duration, MILLISECONDS}
 
 object BidProcessor {
-  case class ProcessBid(campaign: Campaign, bidAmount: Double)
+  case class ProcessBid(bidAmount: Double)
 
-  case class RevertBid(campaign: Campaign, bidAmount: Double)
+  case class RevertBid(bidAmount: Double)
 
   case class BidWinner()
 }
 
-class BidProcessor(auctionId: String, campaignRepository: CampaignRepository) extends Actor {
+class BidProcessor(campaignRepository: CampaignRepository,
+                   auctionId: String, ip: String, bundleName: String, connectionType: String) extends Actor {
   import com.example.BidProcessor._
   import scala.concurrent.ExecutionContext.Implicits.global
 
   val lock = new Object
 
   override def receive: PartialFunction[Any, Unit] = {
-    case ProcessBid(campaign, bidAmount) =>
-      sender ! process(campaign, bidAmount)
+    case ProcessBid(bidAmount) =>
+      sender ! process(bidAmount)
       println(s"Bid with auctionId: `$auctionId` processed successfully")
-      context.system.scheduler.scheduleOnce(Duration(500, MILLISECONDS), self, RevertBid(campaign, bidAmount))
+      context.system.scheduler.scheduleOnce(Duration(500, MILLISECONDS), self, RevertBid(bidAmount))
 
-    case RevertBid(campaign, bidAmount) =>
-      revert(campaign, bidAmount)
+    case RevertBid(bidAmount) =>
+      revert(bidAmount)
       println(s"Bid with auctionId: `$auctionId` reverted successful")
       self ! PoisonPill
 
@@ -38,12 +40,21 @@ class BidProcessor(auctionId: String, campaignRepository: CampaignRepository) ex
       self ! PoisonPill
   }
 
-  private def process(campaign: Campaign, bidAmount: Double): BidResponse = {
-    campaignRepository.update(campaign.copy(Budget = campaign.Budget - BigDecimal.valueOf(bidAmount)))
-    Bid(auctionId, bidAmount, "USD", "http://videos-bucket.com/video123.mov", "something")
+  private def process(bidAmount: Double): BidResponse = lock.synchronized {
+    campaignRepository
+      .findByBundleNameAndConnectionTypeAndCountry(bundleName, ip, connectionType)
+      .map(campaign => {
+        campaignRepository.update(campaign.copy(Budget = campaign.Budget - BigDecimal.valueOf(bidAmount)))
+        Bid(auctionId, bidAmount, "USD", "http://videos-bucket.com/video123.mov", "something")
+      })
+      .getOrElse(NoBid(auctionId))
   }
 
-  private def revert(campaign: Campaign, bidAmount: Double): Unit = {
-    campaignRepository.update(campaign.copy(Budget = campaign.Budget + BigDecimal.valueOf(bidAmount)))
+  private def revert(bidAmount: Double): Unit = lock.synchronized {
+    campaignRepository
+      .findByBundleNameAndConnectionTypeAndCountry(bundleName, ip, connectionType)
+      .foreach(campaign => {
+        campaignRepository.update(campaign.copy(Budget = campaign.Budget + BigDecimal.valueOf(bidAmount)))
+      })
   }
 }
