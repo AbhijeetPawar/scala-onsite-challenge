@@ -2,7 +2,6 @@ package com.example
 
 import akka.actor.{Actor, PoisonPill, ReceiveTimeout}
 
-import scala.concurrent.Future
 import scala.concurrent.duration.{Duration, MILLISECONDS}
 
 object BidProcessor {
@@ -16,9 +15,10 @@ object BidProcessor {
 class BidProcessor(campaignRepository: CampaignRepository,
                    auctionId: String, ip: String, bundleName: String, connectionType: String) extends Actor {
   import com.example.BidProcessor._
+
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  val lock = new Object
+  private val lock = new Object
 
   override def receive: PartialFunction[Any, Unit] = {
     case ProcessBid(bidAmount) =>
@@ -44,8 +44,12 @@ class BidProcessor(campaignRepository: CampaignRepository,
     campaignRepository
       .findByBundleNameAndConnectionTypeAndCountry(bundleName, ip, connectionType)
       .map(campaign => {
-        campaignRepository.update(campaign.copy(Budget = campaign.Budget - BigDecimal.valueOf(bidAmount)))
-        Bid(auctionId, bidAmount, "USD", "http://videos-bucket.com/video123.mov", "something")
+        if (campaign.Budget >= BigDecimal.valueOf(bidAmount)) {
+          campaignRepository.update(campaign.copy(Budget = campaign.Budget - BigDecimal.valueOf(bidAmount)))
+          Bid(auctionId, bidAmount, "USD", "http://videos-bucket.com/video123.mov", "something")
+        } else {
+          NoBid(auctionId)
+        }
       })
       .getOrElse(NoBid(auctionId))
   }
