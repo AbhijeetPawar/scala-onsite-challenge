@@ -17,7 +17,7 @@ trait DspFrontend extends Directives with BidResponseJsonFormats {
 //  implicit val executor: ExecutionContextExecutor
   implicit val materializer: Materializer
 
-  val service: CampaignService
+  var service: CampaignService
 
   val routes: Route =
     path("bid_request") {

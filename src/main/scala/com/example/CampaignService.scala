@@ -2,22 +2,20 @@ package com.example
 
 import java.util.concurrent.{ConcurrentHashMap, TimeUnit}
 
+import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.ask
-import akka.actor.{ActorContext, ActorRef, ActorSystem, PoisonPill, Props}
 import akka.util.Timeout
-import com.example.CampaignServiceProtocol.ProcessBid
+import com.example.BidProcessor.{BidWinner, ProcessBid}
 
-import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, Future}
+import scala.concurrent.Future
 
-class CampaignService(implicit system: ActorSystem) {
-
+class CampaignService(campaignRepository: CampaignRepository)(implicit system: ActorSystem) {
   import scala.concurrent.ExecutionContext.Implicits.global
 
   private val workers = new ConcurrentHashMap[String, ActorRef]()
 
   def bidRequest(auctionId: String, ip: String, bundleName: String, connectionType: String): Future[BidResponse] = {
-    CampaignRepository
+    campaignRepository
       .findByBundleNameAndConnectionTypeAndCountry(bundleName, ip, connectionType)
       .map(campaign => processBid(auctionId, campaign))
       .getOrElse(Future(NoBid(auctionId)))
@@ -26,7 +24,7 @@ class CampaignService(implicit system: ActorSystem) {
   private def processBid(auctionId: String, campaign: Campaign): Future[BidResponse] = {
     implicit val timeout: Timeout = Timeout(1, TimeUnit.SECONDS)
 
-    val processorRef = system.actorOf(Props(classOf[BidProcessor], auctionId), "BidProcessor:" + auctionId)
+    val processorRef = system.actorOf(Props(classOf[BidProcessor], auctionId, campaignRepository), "BidProcessor:" + auctionId)
     workers.put(auctionId, processorRef)
 
     ask(processorRef, ProcessBid(campaign, 0.045))
@@ -38,7 +36,7 @@ class CampaignService(implicit system: ActorSystem) {
     val processorRef = workers.remove(auctionId)
 
     if (processorRef != null) {
-      processorRef ! PoisonPill
+      processorRef ! BidWinner
     }
   }
 }

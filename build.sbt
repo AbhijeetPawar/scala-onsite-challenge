@@ -19,7 +19,8 @@ libraryDependencies ++= {
     "com.typesafe.akka"   %% "akka-http-spray-json" % akkaHttpV,
     "io.spray"            %%  "spray-json" % sprayV,
     "com.typesafe.akka"   %%  "akka-http-testkit" % akkaHttpV  % "test",
-    "org.scalatest"       %%  "scalatest"   % "3.0.1" % "test"
+    "org.scalatest"       %%  "scalatest"   % "3.0.1" % "test",
+    "org.mockito" % "mockito-all" % "1.8.4"
   )
 }
 
