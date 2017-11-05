@@ -46,7 +46,7 @@ class BidProcessor(campaignRepository: CampaignRepository,
       .map(campaign => {
         if (campaign.Budget >= BigDecimal.valueOf(bidAmount)) {
           campaignRepository.update(campaign.copy(Budget = campaign.Budget - BigDecimal.valueOf(bidAmount)))
-          Bid(auctionId, bidAmount, "USD", "http://videos-bucket.com/video123.mov", "something")
+          Bid(auctionId, bidAmount, "USD", "some-creative", s"http://localhost:8080/winner/$auctionId")
         } else {
           NoBid(auctionId)
         }

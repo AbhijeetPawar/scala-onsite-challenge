@@ -6,7 +6,7 @@ import akka.stream.{ActorMaterializer, Materializer}
 
 object Boot extends DspFrontend {
 
-  override implicit val system: ActorSystem = ActorSystem("simple-dsp")
+  override implicit val system: ActorSystem = ActorSystem("dsp")
   override implicit val materializer: Materializer = ActorMaterializer()
 
   override var service: CampaignService = new CampaignService(new CampaignRepository())
