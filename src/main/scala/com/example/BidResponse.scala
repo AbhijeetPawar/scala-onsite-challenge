@@ -17,8 +17,8 @@ final case class Bid(auctionId: String,
 final case class NoBid(auctionId: String, result: String = "no_bid") extends BidResponse
 
 trait BidResponseJsonFormats extends SprayJsonSupport with DefaultJsonProtocol {
-  implicit val bidFormat = jsonFormat(Bid, "auction_id", "bid", "currency", "creative", "winning_notification", "result")
-  implicit val noBidFormat = jsonFormat(NoBid, "auction_id", "result")
+  implicit val bidFormat: RootJsonFormat[Bid] = jsonFormat(Bid, "auction_id", "bid", "currency", "creative", "winning_notification", "result")
+  implicit val noBidFormat: RootJsonFormat[NoBid] = jsonFormat(NoBid, "auction_id", "result")
 
   implicit object BidResponseFormat extends RootJsonFormat[BidResponse] {
     override def write(obj: BidResponse): JsValue = obj match {

@@ -65,7 +65,7 @@ class DspFrontendSpec extends FunSpec with Matchers with ScalatestRouteTest with
       }
     }
 
-    it("should complete bid on bid winner") {
+    it("should complete bid and return a proper winner response for winner request") {
       Get("/bid_request?auction_id=16&ip=127.0.0.1&bundle_name=com.facebook&connection_type=WiFi") ~> routes ~> check {
         Get("/winner/16") ~> routes ~> check {
           status === StatusCodes.OK
@@ -79,8 +79,7 @@ class DspFrontendSpec extends FunSpec with Matchers with ScalatestRouteTest with
       }
     }
 
-
-    it ("should return a proper winner response for winner request") {
+    it ("should return a error for invalid winner request") {
       Get("/winner/6c831376-c1df-43ef-a377-85d83aa3314c") ~> routes ~> check {
         status === StatusCodes.InternalServerError
         responseAs[String] shouldEqual "No entry found for given auction token. Bad Request or Possible Timeout"
