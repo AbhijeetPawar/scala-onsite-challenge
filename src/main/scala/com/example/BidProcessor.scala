@@ -1,6 +1,6 @@
 package com.example
 
-import akka.actor.{Actor, PoisonPill, ReceiveTimeout}
+import akka.actor.{Actor, Cancellable, PoisonPill, ReceiveTimeout}
 
 import scala.concurrent.duration.{Duration, MILLISECONDS}
 
@@ -18,21 +18,23 @@ class BidProcessor(campaignRepository: CampaignRepository,
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  private val lock = new Object
-
   override def receive: PartialFunction[Any, Unit] = {
     case ProcessBid(bidAmount) =>
       sender ! process(bidAmount)
-      println(s"Bid with auctionId: `$auctionId` processed successfully")
-      context.system.scheduler.scheduleOnce(Duration(500, MILLISECONDS), self, RevertBid(bidAmount))
+      println(s"Bid with auctionId: `$auctionId` processed")
+      val cancellable = context.system.scheduler.scheduleOnce(Duration(500, MILLISECONDS), self, RevertBid(bidAmount))
+      context.become(waitOnAck(cancellable))
+  }
+
+  def waitOnAck(cancellable: Cancellable): Receive = {
+    case BidWinner =>
+      cancellable.cancel()
+      println(s"Bid with auctionId: `$auctionId` completed")
+      self ! PoisonPill
 
     case RevertBid(bidAmount) =>
       revert(bidAmount)
-      println(s"Bid with auctionId: `$auctionId` reverted successful")
-      self ! PoisonPill
-
-    case BidWinner =>
-      println(s"Bid with auctionId: `$auctionId` successful")
+      println(s"Bid with auctionId: `$auctionId` reverted")
       self ! PoisonPill
 
     case ReceiveTimeout =>
@@ -40,7 +42,7 @@ class BidProcessor(campaignRepository: CampaignRepository,
       self ! PoisonPill
   }
 
-  private def process(bidAmount: Double): BidResponse = lock.synchronized {
+  private def process(bidAmount: Double): BidResponse = campaignRepository.synchronized {
     campaignRepository
       .findByBundleNameAndConnectionTypeAndCountry(bundleName, ip, connectionType)
       .map(campaign => {
@@ -54,7 +56,7 @@ class BidProcessor(campaignRepository: CampaignRepository,
       .getOrElse(NoBid(auctionId))
   }
 
-  private def revert(bidAmount: Double): Unit = lock.synchronized {
+  private def revert(bidAmount: Double): Unit = campaignRepository.synchronized {
     campaignRepository
       .findByBundleNameAndConnectionTypeAndCountry(bundleName, ip, connectionType)
       .foreach(campaign => {
