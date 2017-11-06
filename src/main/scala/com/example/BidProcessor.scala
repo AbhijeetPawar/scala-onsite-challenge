@@ -24,9 +24,13 @@ class BidProcessor(campaignRepository: CampaignRepository,
       println(s"Bid with auctionId: `$auctionId` processed")
       val cancellable = context.system.scheduler.scheduleOnce(Duration(500, MILLISECONDS), self, RevertBid(bidAmount))
       context.become(waitOnAck(cancellable))
+
+    case ReceiveTimeout =>
+      println(s"Bid with auctionId: `$auctionId` timed-out")
+      self ! PoisonPill
   }
 
-  def waitOnAck(cancellable: Cancellable): Receive = {
+  private def waitOnAck(cancellable: Cancellable): Receive = {
     case BidWinner =>
       cancellable.cancel()
       println(s"Bid with auctionId: `$auctionId` completed")
@@ -35,10 +39,6 @@ class BidProcessor(campaignRepository: CampaignRepository,
     case RevertBid(bidAmount) =>
       revert(bidAmount)
       println(s"Bid with auctionId: `$auctionId` reverted")
-      self ! PoisonPill
-
-    case ReceiveTimeout =>
-      println(s"Bid with auctionId: `$auctionId` timed-out")
       self ! PoisonPill
   }
 
